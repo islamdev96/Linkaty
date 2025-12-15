@@ -721,6 +721,7 @@ function initialize() {
     loadCardOrder();
     initializeDragAndDrop();
     initializeFavoritesBarDragDrop();
+    initializeQuickActions(); // Fix: Added this call to make reset favorites work
     addEntranceAnimations();
     addRippleEffect();
     

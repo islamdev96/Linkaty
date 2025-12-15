@@ -1,6 +1,6 @@
 {
-  "name": "Islam Glab | Personal Link Hub",
-  "short_name": "Link Hub",
+  "name": "Linkaty - لينكاتي",
+  "short_name": "Linkaty",
   "description": "بوابة شخصية للروابط والأدوات الرقمية الأساسية",
   "start_url": "/",
   "display": "standalone",
@@ -19,7 +19,10 @@
       "type": "image/svg+xml"
     }
   ],
-  "categories": ["productivity", "utilities"],
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
   "lang": "ar",
   "dir": "rtl"
-} 
+}
