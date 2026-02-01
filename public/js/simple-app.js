@@ -18,25 +18,25 @@ function hideLoading() {
 function initializeIconFallback() {
     const defaultIcon = '/images/icons/default-icon.svg';
     const images = document.querySelectorAll('.icon-image');
-    
+
     images.forEach(img => {
         // Set onerror directly on the element
         if (!img.onerror) {
-            img.onerror = function() {
+            img.onerror = function () {
                 // Prevent infinite loop
                 if (this.src.indexOf(defaultIcon) === -1 && !this.dataset.fallbackAttempted) {
                     this.dataset.fallbackAttempted = 'true';
                     console.log(`Icon failed to load: ${this.src}, using fallback`);
-                    
+
                     // Try different fallback sources
                     const card = this.closest('.card');
                     const domain = card?.dataset?.url;
-                    
+
                     if (domain && !this.dataset.secondAttempt) {
                         try {
                             const url = new URL(domain);
                             const hostname = url.hostname;
-                            
+
                             // Try Google Favicon API with HTTPS
                             this.dataset.secondAttempt = 'true';
                             this.src = `https://www.google.com/s2/favicons?domain=${hostname}&sz=128`;
@@ -50,13 +50,13 @@ function initializeIconFallback() {
                 }
             };
         }
-        
+
         // Check if image is already broken
         if (img.complete && img.naturalWidth === 0) {
             // Trigger error handler
             img.onerror();
         }
-        
+
         // Also check for mixed content issues
         if (window.location.protocol === 'https:' && img.src.startsWith('http://')) {
             console.warn(`Mixed content warning: ${img.src}`);
@@ -64,9 +64,9 @@ function initializeIconFallback() {
             img.src = img.src.replace('http://', 'https://');
         }
     });
-    
+
     // Add global error handler for dynamically added images
-    document.addEventListener('error', function(e) {
+    document.addEventListener('error', function (e) {
         if (e.target.classList && e.target.classList.contains('icon-image')) {
             const img = e.target;
             if (img.src.indexOf(defaultIcon) === -1) {
@@ -80,12 +80,12 @@ function initializeIconFallback() {
 function initializeTheme() {
     const themeBtn = document.getElementById('themeToggle');
     if (!themeBtn) return;
-    
+
     // Load saved theme
     const savedTheme = localStorage.getItem('app-theme') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
     updateThemeIcon(savedTheme);
-    
+
     // Add click listener
     themeBtn.addEventListener('click', () => {
         const current = document.documentElement.getAttribute('data-theme') || 'light';
@@ -107,7 +107,7 @@ function updateThemeIcon(theme) {
 function initializeSearch() {
     const searchInput = document.getElementById('searchInput');
     const clearBtn = document.getElementById('clearSearch');
-    
+
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             filterCards(e.target.value);
@@ -116,7 +116,7 @@ function initializeSearch() {
             }
         });
     }
-    
+
     if (clearBtn) {
         clearBtn.addEventListener('click', () => {
             searchInput.value = '';
@@ -130,16 +130,16 @@ function filterCards(query) {
     const cards = document.querySelectorAll('.card');
     const searchTerm = query.toLowerCase();
     let visibleCount = 0;
-    
+
     cards.forEach(card => {
         const title = card.querySelector('.title')?.textContent.toLowerCase() || '';
         const description = card.querySelector('.description')?.textContent.toLowerCase() || '';
         const matches = title.includes(searchTerm) || description.includes(searchTerm);
-        
+
         card.style.display = matches ? 'block' : 'none';
         if (matches) visibleCount++;
     });
-    
+
 }
 
 
@@ -162,9 +162,9 @@ function initializeCardClicks() {
 function initializeFavoritesBarDragDrop() {
     const favoritesBarContent = document.getElementById('favoritesBarContent');
     if (!favoritesBarContent) return;
-    
+
     let draggedItem = null;
-    
+
     favoritesBarContent.addEventListener('dragstart', (e) => {
         if (e.target.classList.contains('favorite-item-wrapper')) {
             draggedItem = e.target;
@@ -172,13 +172,13 @@ function initializeFavoritesBarDragDrop() {
             e.dataTransfer.effectAllowed = 'move';
         }
     });
-    
+
     favoritesBarContent.addEventListener('dragend', (e) => {
         if (e.target.classList.contains('favorite-item-wrapper')) {
             e.target.classList.remove('dragging');
         }
     });
-    
+
     favoritesBarContent.addEventListener('dragover', (e) => {
         e.preventDefault();
         const afterElement = getDragAfterElement(favoritesBarContent, e.clientX);
@@ -188,17 +188,17 @@ function initializeFavoritesBarDragDrop() {
             favoritesBarContent.insertBefore(draggedItem, afterElement);
         }
     });
-    
+
     favoritesBarContent.addEventListener('drop', (e) => {
         e.preventDefault();
-        
+
         // Update favorites order in localStorage
         const newOrder = [];
         favoritesBarContent.querySelectorAll('.favorite-item-wrapper').forEach(item => {
             newOrder.push(item.dataset.url);
         });
         localStorage.setItem('app-favorites', JSON.stringify(newOrder));
-        
+
         // Update card buttons to match new order
         updateCardButtons();
     });
@@ -206,11 +206,11 @@ function initializeFavoritesBarDragDrop() {
 
 function getDragAfterElement(container, x) {
     const draggableElements = [...container.querySelectorAll('.favorite-item-wrapper:not(.dragging)')];
-    
+
     return draggableElements.reduce((closest, child) => {
         const box = child.getBoundingClientRect();
         const offset = x - box.left - box.width / 2;
-        
+
         if (offset < 0 && offset > closest.offset) {
             return { offset: offset, element: child };
         } else {
@@ -224,31 +224,31 @@ function updateFavoritesBar() {
     const favorites = JSON.parse(localStorage.getItem('app-favorites') || '[]');
     const favoritesBar = document.getElementById('favoritesBar');
     const favoritesBarContent = document.getElementById('favoritesBarContent');
-    
+
     if (!favoritesBar || !favoritesBarContent) return;
-    
+
     // Clear current content
     favoritesBarContent.innerHTML = '';
-    
+
     if (favorites.length > 0) {
         favoritesBar.classList.add('has-favorites');
-        
+
         // Add each favorite to the bar
         favorites.forEach(url => {
             const card = document.querySelector(`.card[data-url="${url}"]`);
             if (card) {
                 const title = card.dataset.title || card.querySelector('.title')?.textContent || 'Link';
                 const iconSrc = card.querySelector('.icon-image')?.src || '';
-                
+
                 // Check if card has custom SVG icon
                 const customIcon = card.querySelector('.custom-icon');
                 const description = card.dataset.description || card.querySelector('.description')?.textContent || '';
-                
+
                 const favoriteItem = document.createElement('div');
                 favoriteItem.className = 'favorite-item-wrapper';
                 favoriteItem.draggable = true;
                 favoriteItem.dataset.url = url;
-                
+
                 let iconHtml = '';
                 if (customIcon) {
                     // Clone the custom SVG icon
@@ -266,7 +266,7 @@ function updateFavoritesBar() {
                     }
                     iconHtml = `<img src="${faviconUrl}" alt="${title}" onerror="this.src='https://www.google.com/s2/favicons?domain=google.com&sz=128'">`;
                 }
-                
+
                 favoriteItem.innerHTML = `
                     <button class="remove-favorite-btn" data-url="${url}" title="إزالة من المفضلة">
                         <i class="fas fa-times"></i>
@@ -276,27 +276,27 @@ function updateFavoritesBar() {
                         <div class="favorite-item-title">${title}</div>
                     </a>
                 `;
-                
+
                 favoritesBarContent.appendChild(favoriteItem);
             }
         });
     } else {
         favoritesBar.classList.remove('has-favorites');
     }
-    
+
     // Add click listeners for remove buttons
     favoritesBarContent.querySelectorAll('.remove-favorite-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            
+
             const urlToRemove = btn.dataset.url;
             let favorites = JSON.parse(localStorage.getItem('app-favorites') || '[]');
-            
+
             // Remove from favorites
             favorites = favorites.filter(url => url !== urlToRemove);
             localStorage.setItem('app-favorites', JSON.stringify(favorites));
-            
+
             // Update the card's favorite button
             const card = document.querySelector(`.card[data-url="${urlToRemove}"]`);
             if (card) {
@@ -307,14 +307,14 @@ function updateFavoritesBar() {
                     if (icon) icon.className = 'far fa-heart';
                 }
             }
-            
+
             // Update UI
             updateFavoritesBar();
             updateCategoryBadges();
             showToast('تمت الإزالة من المفضلة', 'info');
         });
     });
-    
+
     // Initialize drag and drop for favorites bar
     initializeFavoritesBarDragDrop();
 }
@@ -322,7 +322,7 @@ function updateFavoritesBar() {
 // Update card buttons to match current favorites
 function updateCardButtons() {
     const favorites = JSON.parse(localStorage.getItem('app-favorites') || '[]');
-    
+
     document.querySelectorAll('.card').forEach(card => {
         const url = card.dataset.url;
         const btn = card.querySelector('.favorite-btn');
@@ -347,23 +347,23 @@ function initializeFavorites() {
         'https://web.whatsapp.com',
         'https://www.facebook.com',
         'https://www.youtube.com',
-        'https://chatgpt.com/',
+        'https://gemini.google.com/',
         'https://claude.ai/new'
     ];
-    
+
     // Check if this is first visit
     const isFirstVisit = !localStorage.getItem('app-visited');
-    
+
     // Get saved favorites from localStorage
     let favorites = JSON.parse(localStorage.getItem('app-favorites') || '[]');
-    
+
     // If first visit or no favorites saved, use defaults
     if (isFirstVisit || favorites.length === 0) {
         favorites = defaultFavorites;
         localStorage.setItem('app-favorites', JSON.stringify(favorites));
         localStorage.setItem('app-visited', 'true');
     }
-    
+
     // Update all favorite buttons based on current favorites
     document.querySelectorAll('.card').forEach(card => {
         const url = card.dataset.url;
@@ -381,28 +381,28 @@ function initializeFavorites() {
             }
         }
     });
-    
+
     // Update favorites bar
     updateFavoritesBar();
-    
+
     // Add click listener for toggle
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('.favorite-btn');
         if (!btn) return;
-        
+
         e.preventDefault();
         e.stopPropagation(); // Stop event from reaching card click
         const card = btn.closest('.card');
         if (!card) return;
-        
+
         const url = card.dataset.url;
         const icon = btn.querySelector('i');
         if (!icon) return;
-        
+
         // Get current favorites
         favorites = JSON.parse(localStorage.getItem('app-favorites') || '[]');
         const index = favorites.indexOf(url);
-        
+
         if (index > -1) {
             // Remove from favorites
             favorites.splice(index, 1);
@@ -416,10 +416,10 @@ function initializeFavorites() {
             btn.classList.add('active');
             showToast('تمت الإضافة للمفضلة', 'success');
         }
-        
+
         // Save updated favorites
         localStorage.setItem('app-favorites', JSON.stringify(favorites));
-        
+
         // Update favorites bar and badges
         updateFavoritesBar();
         updateCategoryBadges();
@@ -431,11 +431,11 @@ function updateCategoryBadges() {
     const buttons = document.querySelectorAll('.category-btn');
     const cards = document.querySelectorAll('.card');
     const favorites = JSON.parse(localStorage.getItem('app-favorites') || '[]');
-    
+
     buttons.forEach(btn => {
         const category = btn.dataset.category;
         let count = 0;
-        
+
         if (category === 'all') {
             count = cards.length;
         } else if (category === 'favorites') {
@@ -445,11 +445,11 @@ function updateCategoryBadges() {
                 if (card.dataset.category === category) count++;
             });
         }
-        
+
         // Remove existing badge if any
         const existingBadge = btn.querySelector('.badge');
         if (existingBadge) existingBadge.remove();
-        
+
         // Add new badge
         if (count > 0) {
             const badge = document.createElement('span');
@@ -463,15 +463,15 @@ function updateCategoryBadges() {
 // Initialize category filter
 function initializeCategoryFilter() {
     const buttons = document.querySelectorAll('.category-btn');
-    
+
     // Update badges initially
     updateCategoryBadges();
-    
+
     buttons.forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            
+
             // Update active button simply
             buttons.forEach(b => {
                 b.classList.remove('active');
@@ -479,12 +479,12 @@ function initializeCategoryFilter() {
             });
             btn.classList.add('active');
             btn.style.transform = 'none';
-            
+
             // Filter cards
             const category = btn.dataset.category;
             const cards = document.querySelectorAll('.card');
             let visibleCount = 0;
-            
+
             if (category === 'favorites') {
                 // Show only favorites
                 const favorites = JSON.parse(localStorage.getItem('app-favorites') || '[]');
@@ -501,8 +501,8 @@ function initializeCategoryFilter() {
                     if (matches) visibleCount++;
                 });
             }
-            
-                });
+
+        });
     });
 }
 
@@ -523,19 +523,19 @@ function initializeKeyboardShortcuts() {
 // Show toast notifications
 function showToast(message, type = 'success') {
     const container = document.getElementById('toastContainer') || createToastContainer();
-    
+
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.innerHTML = `
         <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'}"></i>
         <span>${message}</span>
     `;
-    
+
     container.appendChild(toast);
-    
+
     // Animate in
     setTimeout(() => toast.classList.add('show'), 100);
-    
+
     // Remove after 3 seconds
     setTimeout(() => {
         toast.classList.remove('show');
@@ -555,11 +555,11 @@ function createToastContainer() {
 function initializeScrollTop() {
     const scrollBtn = document.getElementById('scrollTop');
     if (!scrollBtn) return;
-    
+
     window.addEventListener('scroll', () => {
         scrollBtn.style.display = window.scrollY > 300 ? 'block' : 'none';
     });
-    
+
     scrollBtn.addEventListener('click', () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     });
@@ -570,50 +570,50 @@ function initializeDragAndDrop() {
     const cards = document.querySelectorAll('.card');
     const grid = document.getElementById('linksGrid');
     let draggedElement = null;
-    
+
     cards.forEach(card => {
         card.setAttribute('draggable', 'true');
-        
+
         card.addEventListener('dragstart', (e) => {
             draggedElement = card;
             card.classList.add('dragging');
             e.dataTransfer.effectAllowed = 'move';
             e.dataTransfer.setData('text/html', card.innerHTML);
         });
-        
+
         card.addEventListener('dragend', () => {
             card.classList.remove('dragging');
         });
-        
+
         card.addEventListener('dragover', (e) => {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
-            
+
             if (card !== draggedElement) {
                 card.classList.add('drag-over');
             }
         });
-        
+
         card.addEventListener('dragleave', () => {
             card.classList.remove('drag-over');
         });
-        
+
         card.addEventListener('drop', (e) => {
             e.preventDefault();
             card.classList.remove('drag-over');
-            
+
             if (card !== draggedElement && draggedElement) {
                 // Swap positions
                 const allCards = [...grid.children];
                 const draggedIndex = allCards.indexOf(draggedElement);
                 const targetIndex = allCards.indexOf(card);
-                
+
                 if (draggedIndex < targetIndex) {
                     card.parentNode.insertBefore(draggedElement, card.nextSibling);
                 } else {
                     card.parentNode.insertBefore(draggedElement, card);
                 }
-                
+
                 saveCardOrder();
                 showToast('تم تغيير الترتيب بنجاح');
             }
@@ -630,11 +630,11 @@ function saveCardOrder() {
 function loadCardOrder() {
     const savedOrder = localStorage.getItem('card-order');
     if (!savedOrder) return;
-    
+
     const order = JSON.parse(savedOrder);
     const grid = document.getElementById('linksGrid');
     const cards = Array.from(document.querySelectorAll('.card'));
-    
+
     order.forEach(url => {
         const card = cards.find(c => c.dataset.url === url);
         if (card) {
@@ -665,7 +665,7 @@ function initializeQuickActions() {
             }
         });
     }
-    
+
     // Clear all favorites
     const clearBtn = document.getElementById('clearAllFavorites');
     if (clearBtn) {
@@ -677,12 +677,12 @@ function initializeQuickActions() {
                     'https://web.whatsapp.com',
                     'https://www.facebook.com',
                     'https://www.youtube.com',
-                    'https://chatgpt.com/',
+                    'https://gemini.google.com/',
                     'https://claude.ai/new'
                 ];
-                
+
                 localStorage.setItem('app-favorites', JSON.stringify(defaultFavorites));
-                
+
                 // Reset all favorite buttons
                 document.querySelectorAll('.favorite-btn').forEach(btn => {
                     const card = btn.closest('.card');
@@ -696,7 +696,7 @@ function initializeQuickActions() {
                         if (icon) icon.className = 'far fa-heart';
                     }
                 });
-                
+
                 updateFavoritesBar();
                 updateCategoryBadges();
                 showToast('تم إعادة تعيين المفضلات', 'success');
@@ -708,7 +708,7 @@ function initializeQuickActions() {
 // Main initialization
 function initialize() {
     console.log('🚀 Initializing Modern Links Hub...');
-    
+
     hideLoading();
     initializeTheme();
     initializeIconFallback(); // Handle icon loading errors
@@ -724,7 +724,7 @@ function initialize() {
     initializeQuickActions(); // Fix: Added this call to make reset favorites work
     addEntranceAnimations();
     addRippleEffect();
-    
+
     console.log('✅ Modern Links Hub Initialized Successfully!');
 }
 
