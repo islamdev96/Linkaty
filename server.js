@@ -43,9 +43,9 @@ const server = http.createServer((req, res) => {
   res.setHeader('Content-Security-Policy', 
     "default-src 'self'; " +
     "script-src 'self' 'unsafe-inline'; " +
-    "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; " +
+    "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; " +
     "img-src 'self' data: https: blob:; " +
-    "font-src 'self' https://cdnjs.cloudflare.com; " +
+    "font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; " +
     "connect-src 'self' https://cdnjs.cloudflare.com; " +
     "frame-ancestors 'none';"
   );

@@ -1,5 +1,5 @@
-const CACHE_NAME = 'modern-links-hub-v1.0.0';
-const RUNTIME_CACHE = 'runtime-cache-v1';
+const CACHE_NAME = 'linkaty-v2.0.0';
+const RUNTIME_CACHE = 'runtime-cache-v2';
 
 // Assets to cache on install
 const STATIC_ASSETS = [

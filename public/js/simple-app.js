@@ -1,34 +1,64 @@
 /**
- * Simple Standalone App - No Dependencies
- * تطبيق بسيط مستقل بدون اعتماديات
+ * Linkaty - Simple Standalone App
+ * تطبيق لينكاتي المستقل بدون اعتماديات
  */
 
-// Hide loading screen
+// ========== Constants ==========
+const DEFAULT_FAVORITES = [
+    'https://translate.google.com',
+    'https://web.whatsapp.com',
+    'https://www.facebook.com',
+    'https://www.youtube.com',
+    'https://gemini.google.com/',
+    'https://claude.ai/new'
+];
+
+// ========== Utility Functions ==========
+
+/**
+ * Escape HTML to prevent XSS attacks
+ * @param {string} str - String to escape
+ * @returns {string} Escaped string
+ */
+function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+/**
+ * Get the currently active category filter
+ * @returns {string} Active category name
+ */
+function getActiveCategory() {
+    const activeBtn = document.querySelector('.category-btn.active');
+    return activeBtn ? activeBtn.dataset.category : 'all';
+}
+
+// ========== Loading ==========
+
 function hideLoading() {
     const loading = document.querySelector('.loading');
     if (loading) {
         loading.style.display = 'none';
     }
-    // Ensure body is visible
     document.body.classList.add('loaded');
     document.body.style.opacity = '1';
 }
 
-// Initialize icon fallback handling
+// ========== Icon Fallback ==========
+
 function initializeIconFallback() {
     const defaultIcon = '/images/icons/default-icon.svg';
     const images = document.querySelectorAll('.icon-image');
 
     images.forEach(img => {
-        // Set onerror directly on the element
         if (!img.onerror) {
             img.onerror = function () {
-                // Prevent infinite loop
                 if (this.src.indexOf(defaultIcon) === -1 && !this.dataset.fallbackAttempted) {
                     this.dataset.fallbackAttempted = 'true';
                     console.log(`Icon failed to load: ${this.src}, using fallback`);
 
-                    // Try different fallback sources
                     const card = this.closest('.card');
                     const domain = card?.dataset?.url;
 
@@ -36,15 +66,12 @@ function initializeIconFallback() {
                         try {
                             const url = new URL(domain);
                             const hostname = url.hostname;
-
-                            // Try Google Favicon API with HTTPS
                             this.dataset.secondAttempt = 'true';
                             this.src = `https://www.google.com/s2/favicons?domain=${hostname}&sz=128`;
                         } catch (e) {
                             this.src = defaultIcon;
                         }
                     } else {
-                        // Use default icon as final fallback
                         this.src = defaultIcon;
                     }
                 }
@@ -53,19 +80,17 @@ function initializeIconFallback() {
 
         // Check if image is already broken
         if (img.complete && img.naturalWidth === 0) {
-            // Trigger error handler
             img.onerror();
         }
 
-        // Also check for mixed content issues
+        // Fix mixed content issues
         if (window.location.protocol === 'https:' && img.src.startsWith('http://')) {
             console.warn(`Mixed content warning: ${img.src}`);
-            // Convert to HTTPS or use fallback
             img.src = img.src.replace('http://', 'https://');
         }
     });
 
-    // Add global error handler for dynamically added images
+    // Global error handler for dynamically added images
     document.addEventListener('error', function (e) {
         if (e.target.classList && e.target.classList.contains('icon-image')) {
             const img = e.target;
@@ -76,17 +101,20 @@ function initializeIconFallback() {
     }, true);
 }
 
-// Initialize theme toggle
+// ========== Theme ==========
+
 function initializeTheme() {
     const themeBtn = document.getElementById('themeToggle');
     if (!themeBtn) return;
 
-    // Load saved theme
-    const savedTheme = localStorage.getItem('app-theme') || 'light';
-    document.documentElement.setAttribute('data-theme', savedTheme);
-    updateThemeIcon(savedTheme);
+    // Load saved theme or detect system preference
+    const savedTheme = localStorage.getItem('app-theme');
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const theme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
 
-    // Add click listener
+    document.documentElement.setAttribute('data-theme', theme);
+    updateThemeIcon(theme);
+
     themeBtn.addEventListener('click', () => {
         const current = document.documentElement.getAttribute('data-theme') || 'light';
         const newTheme = current === 'light' ? 'dark' : 'light';
@@ -103,7 +131,8 @@ function updateThemeIcon(theme) {
     }
 }
 
-// Initialize search
+// ========== Search ==========
+
 function initializeSearch() {
     const searchInput = document.getElementById('searchInput');
     const clearBtn = document.getElementById('clearSearch');
@@ -126,39 +155,53 @@ function initializeSearch() {
     }
 }
 
+/**
+ * Filter cards by search query while respecting active category
+ * @param {string} query - Search term
+ */
 function filterCards(query) {
     const cards = document.querySelectorAll('.card');
-    const searchTerm = query.toLowerCase();
+    const searchTerm = query.toLowerCase().trim();
+    const activeCategory = getActiveCategory();
+    const favorites = JSON.parse(localStorage.getItem('app-favorites') || '[]');
     let visibleCount = 0;
 
     cards.forEach(card => {
         const title = card.querySelector('.title')?.textContent.toLowerCase() || '';
         const description = card.querySelector('.description')?.textContent.toLowerCase() || '';
-        const matches = title.includes(searchTerm) || description.includes(searchTerm);
+        const matchesSearch = !searchTerm || title.includes(searchTerm) || description.includes(searchTerm);
 
-        card.style.display = matches ? 'block' : 'none';
-        if (matches) visibleCount++;
+        // Also check category filter
+        let matchesCategory = true;
+        if (activeCategory === 'favorites') {
+            matchesCategory = favorites.includes(card.dataset.url);
+        } else if (activeCategory !== 'all') {
+            matchesCategory = card.dataset.category === activeCategory;
+        }
+
+        const isVisible = matchesSearch && matchesCategory;
+        card.style.display = isVisible ? 'block' : 'none';
+        if (isVisible) visibleCount++;
     });
-
 }
 
+// ========== Card Clicks ==========
 
-// Initialize card clicks
 function initializeCardClicks() {
     document.addEventListener('click', (e) => {
-        // Handle card click
         const card = e.target.closest('.card');
         if (card && !e.target.closest('.favorite-btn')) {
             e.preventDefault();
             const url = card.dataset.url;
             if (url) {
-                window.open(url, '_blank');
+                window.open(url, '_blank', 'noopener,noreferrer');
             }
         }
     });
 }
 
-// Initialize favorites bar drag and drop
+// ========== Favorites Bar Drag & Drop ==========
+
 function initializeFavoritesBarDragDrop() {
     const favoritesBarContent = document.getElementById('favoritesBarContent');
     if (!favoritesBarContent) return;
@@ -219,7 +262,8 @@ function getDragAfterElement(container, x) {
     }, { offset: Number.NEGATIVE_INFINITY }).element;
 }
 
-// Update favorites bar
+// ========== Favorites Bar ==========
+
 function updateFavoritesBar() {
     const favorites = JSON.parse(localStorage.getItem('app-favorites') || '[]');
     const favoritesBar = document.getElementById('favoritesBar');
@@ -227,58 +271,76 @@ function updateFavoritesBar() {
 
     if (!favoritesBar || !favoritesBarContent) return;
 
-    // Clear current content
+    // Clear current content (also removes old event listeners)
     favoritesBarContent.innerHTML = '';
 
     if (favorites.length > 0) {
         favoritesBar.classList.add('has-favorites');
 
-        // Add each favorite to the bar
         favorites.forEach(url => {
-            const card = document.querySelector(`.card[data-url="${url}"]`);
-            if (card) {
-                const title = card.dataset.title || card.querySelector('.title')?.textContent || 'Link';
-                const iconSrc = card.querySelector('.icon-image')?.src || '';
+            const card = document.querySelector(`.card[data-url="${CSS.escape(url)}"]`);
+            if (!card) return;
 
-                // Check if card has custom SVG icon
-                const customIcon = card.querySelector('.custom-icon');
-                const description = card.dataset.description || card.querySelector('.description')?.textContent || '';
+            const title = card.dataset.title || card.querySelector('.title')?.textContent || 'Link';
+            const iconSrc = card.querySelector('.icon-image')?.src || '';
+            const customIcon = card.querySelector('.custom-icon');
+            const description = card.dataset.description || card.querySelector('.description')?.textContent || '';
 
-                const favoriteItem = document.createElement('div');
-                favoriteItem.className = 'favorite-item-wrapper';
-                favoriteItem.draggable = true;
-                favoriteItem.dataset.url = url;
+            const favoriteItem = document.createElement('div');
+            favoriteItem.className = 'favorite-item-wrapper';
+            favoriteItem.draggable = true;
+            favoriteItem.dataset.url = url;
 
-                let iconHtml = '';
-                if (customIcon) {
-                    // Clone the custom SVG icon
-                    iconHtml = `<div class="icon-wrapper-small">${customIcon.outerHTML}</div>`;
-                } else {
-                    // Use regular image favicon
-                    let faviconUrl = iconSrc;
-                    if (iconSrc && iconSrc.includes('google.com/s2/favicons')) {
-                        try {
-                            const domain = new URL(url).hostname;
-                            faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-                        } catch (e) {
-                            faviconUrl = iconSrc;
-                        }
+            // Build icon HTML safely
+            let iconElement;
+            if (customIcon) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'icon-wrapper-small';
+                wrapper.appendChild(customIcon.cloneNode(true));
+                iconElement = wrapper;
+            } else {
+                let faviconUrl = iconSrc;
+                if (iconSrc && iconSrc.includes('google.com/s2/favicons')) {
+                    try {
+                        const domain = new URL(url).hostname;
+                        faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+                    } catch (e) {
+                        faviconUrl = iconSrc;
                     }
-                    iconHtml = `<img src="${faviconUrl}" alt="${title}" onerror="this.src='https://www.google.com/s2/favicons?domain=google.com&sz=128'">`;
                 }
-
-                favoriteItem.innerHTML = `
-                    <button class="remove-favorite-btn" data-url="${url}" title="إزالة من المفضلة">
-                        <i class="fas fa-times"></i>
-                    </button>
-                    <a href="${url}" target="_blank" class="favorite-item" title="${description}">
-                        ${iconHtml}
-                        <div class="favorite-item-title">${title}</div>
-                    </a>
-                `;
-
-                favoritesBarContent.appendChild(favoriteItem);
+                const img = document.createElement('img');
+                img.src = faviconUrl;
+                img.alt = escapeHTML(title);
+                img.onerror = function () {
+                    this.src = 'https://www.google.com/s2/favicons?domain=google.com&sz=128';
+                };
+                iconElement = img;
             }
+
+            // Build remove button safely
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'remove-favorite-btn';
+            removeBtn.dataset.url = url;
+            removeBtn.title = 'إزالة من المفضلة';
+            removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+
+            // Build link safely
+            const link = document.createElement('a');
+            link.href = url;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.className = 'favorite-item';
+            link.title = escapeHTML(description);
+            link.appendChild(iconElement);
+
+            const titleDiv = document.createElement('div');
+            titleDiv.className = 'favorite-item-title';
+            titleDiv.textContent = title; // Safe: textContent auto-escapes
+            link.appendChild(titleDiv);
+
+            favoriteItem.appendChild(removeBtn);
+            favoriteItem.appendChild(link);
+            favoritesBarContent.appendChild(favoriteItem);
         });
     } else {
         favoritesBar.classList.remove('has-favorites');
@@ -291,14 +353,13 @@ function updateFavoritesBar() {
             e.stopPropagation();
 
             const urlToRemove = btn.dataset.url;
-            let favorites = JSON.parse(localStorage.getItem('app-favorites') || '[]');
+            let currentFavorites = JSON.parse(localStorage.getItem('app-favorites') || '[]');
 
-            // Remove from favorites
-            favorites = favorites.filter(url => url !== urlToRemove);
-            localStorage.setItem('app-favorites', JSON.stringify(favorites));
+            currentFavorites = currentFavorites.filter(u => u !== urlToRemove);
+            localStorage.setItem('app-favorites', JSON.stringify(currentFavorites));
 
             // Update the card's favorite button
-            const card = document.querySelector(`.card[data-url="${urlToRemove}"]`);
+            const card = document.querySelector(`.card[data-url="${CSS.escape(urlToRemove)}"]`);
             if (card) {
                 const favBtn = card.querySelector('.favorite-btn');
                 if (favBtn) {
@@ -308,7 +369,6 @@ function updateFavoritesBar() {
                 }
             }
 
-            // Update UI
             updateFavoritesBar();
             updateCategoryBadges();
             showToast('تمت الإزالة من المفضلة', 'info');
@@ -319,7 +379,8 @@ function updateFavoritesBar() {
     initializeFavoritesBarDragDrop();
 }
 
-// Update card buttons to match current favorites
+// ========== Card Buttons ==========
+
 function updateCardButtons() {
     const favorites = JSON.parse(localStorage.getItem('app-favorites') || '[]');
 
@@ -339,18 +400,9 @@ function updateCardButtons() {
     });
 }
 
-// Initialize favorites
-function initializeFavorites() {
-    // Default favorites
-    const defaultFavorites = [
-        'https://translate.google.com',
-        'https://web.whatsapp.com',
-        'https://www.facebook.com',
-        'https://www.youtube.com',
-        'https://gemini.google.com/',
-        'https://claude.ai/new'
-    ];
+// ========== Favorites ==========
 
+function initializeFavorites() {
     // Check if this is first visit
     const isFirstVisit = !localStorage.getItem('app-visited');
 
@@ -359,7 +411,7 @@ function initializeFavorites() {
 
     // If first visit or no favorites saved, use defaults
     if (isFirstVisit || favorites.length === 0) {
-        favorites = defaultFavorites;
+        favorites = [...DEFAULT_FAVORITES];
         localStorage.setItem('app-favorites', JSON.stringify(favorites));
         localStorage.setItem('app-visited', 'true');
     }
@@ -371,11 +423,9 @@ function initializeFavorites() {
         if (btn) {
             const icon = btn.querySelector('i');
             if (favorites.includes(url)) {
-                // This is a favorite
                 if (icon) icon.className = 'fas fa-heart';
                 btn.classList.add('active');
             } else {
-                // Not a favorite
                 if (icon) icon.className = 'far fa-heart';
                 btn.classList.remove('active');
             }
@@ -385,13 +435,13 @@ function initializeFavorites() {
     // Update favorites bar
     updateFavoritesBar();
 
-    // Add click listener for toggle
+    // Add click listener for toggle (single delegate handler)
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('.favorite-btn');
         if (!btn) return;
 
         e.preventDefault();
-        e.stopPropagation(); // Stop event from reaching card click
+        e.stopPropagation();
         const card = btn.closest('.card');
         if (!card) return;
 
@@ -400,33 +450,30 @@ function initializeFavorites() {
         if (!icon) return;
 
         // Get current favorites
-        favorites = JSON.parse(localStorage.getItem('app-favorites') || '[]');
-        const index = favorites.indexOf(url);
+        let currentFavorites = JSON.parse(localStorage.getItem('app-favorites') || '[]');
+        const index = currentFavorites.indexOf(url);
 
         if (index > -1) {
-            // Remove from favorites
-            favorites.splice(index, 1);
-            icon.className = 'far fa-heart'; // Empty heart
+            currentFavorites.splice(index, 1);
+            icon.className = 'far fa-heart';
             btn.classList.remove('active');
             showToast('تمت الإزالة من المفضلة', 'info');
         } else {
-            // Add to favorites
-            favorites.push(url);
-            icon.className = 'fas fa-heart'; // Filled heart
+            currentFavorites.push(url);
+            icon.className = 'fas fa-heart';
             btn.classList.add('active');
             showToast('تمت الإضافة للمفضلة', 'success');
         }
 
-        // Save updated favorites
-        localStorage.setItem('app-favorites', JSON.stringify(favorites));
+        localStorage.setItem('app-favorites', JSON.stringify(currentFavorites));
 
-        // Update favorites bar and badges
         updateFavoritesBar();
         updateCategoryBadges();
     });
 }
 
-// Update category badges
+// ========== Category Badges ==========
+
 function updateCategoryBadges() {
     const buttons = document.querySelectorAll('.category-btn');
     const cards = document.querySelectorAll('.card');
@@ -460,7 +507,8 @@ function updateCategoryBadges() {
     });
 }
 
-// Initialize category filter
+// ========== Category Filter ==========
+
 function initializeCategoryFilter() {
     const buttons = document.querySelectorAll('.category-btn');
 
@@ -472,7 +520,7 @@ function initializeCategoryFilter() {
             e.preventDefault();
             e.stopPropagation();
 
-            // Update active button simply
+            // Update active button
             buttons.forEach(b => {
                 b.classList.remove('active');
                 b.style.transform = 'none';
@@ -480,35 +528,21 @@ function initializeCategoryFilter() {
             btn.classList.add('active');
             btn.style.transform = 'none';
 
-            // Filter cards
-            const category = btn.dataset.category;
-            const cards = document.querySelectorAll('.card');
-            let visibleCount = 0;
+            // Get current search query and apply both filters
+            const searchInput = document.getElementById('searchInput');
+            const searchQuery = searchInput ? searchInput.value : '';
 
-            if (category === 'favorites') {
-                // Show only favorites
-                const favorites = JSON.parse(localStorage.getItem('app-favorites') || '[]');
-                cards.forEach(card => {
-                    const isFavorite = favorites.includes(card.dataset.url);
-                    card.style.display = isFavorite ? 'block' : 'none';
-                    if (isFavorite) visibleCount++;
-                });
-            } else {
-                // Regular category filter
-                cards.forEach(card => {
-                    const matches = category === 'all' || card.dataset.category === category;
-                    card.style.display = matches ? 'block' : 'none';
-                    if (matches) visibleCount++;
-                });
-            }
-
+            // Use filterCards which now respects the active category
+            filterCards(searchQuery);
         });
     });
 }
 
-// Keyboard shortcuts
+// ========== Keyboard Shortcuts ==========
+
 function initializeKeyboardShortcuts() {
     document.addEventListener('keydown', (e) => {
+        // Ctrl+K: Focus search
         if (e.ctrlKey && e.key === 'k') {
             e.preventDefault();
             const searchInput = document.getElementById('searchInput');
@@ -517,10 +551,22 @@ function initializeKeyboardShortcuts() {
                 searchInput.select();
             }
         }
+
+        // Escape: Clear search and reset filter
+        if (e.key === 'Escape') {
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput && searchInput.value) {
+                searchInput.value = '';
+                filterCards('');
+                const clearBtn = document.getElementById('clearSearch');
+                if (clearBtn) clearBtn.style.display = 'none';
+            }
+        }
     });
 }
 
-// Show toast notifications
+// ========== Toast Notifications ==========
+
 function showToast(message, type = 'success') {
     const container = document.getElementById('toastContainer') || createToastContainer();
 
@@ -528,7 +574,7 @@ function showToast(message, type = 'success') {
     toast.className = `toast toast-${type}`;
     toast.innerHTML = `
         <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'}"></i>
-        <span>${message}</span>
+        <span>${escapeHTML(message)}</span>
     `;
 
     container.appendChild(toast);
@@ -551,13 +597,14 @@ function createToastContainer() {
     return container;
 }
 
-// Scroll to top
+// ========== Scroll to Top ==========
+
 function initializeScrollTop() {
     const scrollBtn = document.getElementById('scrollTop');
     if (!scrollBtn) return;
 
     window.addEventListener('scroll', () => {
-        scrollBtn.style.display = window.scrollY > 300 ? 'block' : 'none';
+        scrollBtn.style.display = window.scrollY > 300 ? 'flex' : 'none';
     });
 
     scrollBtn.addEventListener('click', () => {
@@ -565,7 +612,8 @@ function initializeScrollTop() {
     });
 }
 
-// Drag and Drop functionality
+// ========== Drag and Drop (Cards) ==========
+
 function initializeDragAndDrop() {
     const cards = document.querySelectorAll('.card');
     const grid = document.getElementById('linksGrid');
@@ -603,7 +651,6 @@ function initializeDragAndDrop() {
             card.classList.remove('drag-over');
 
             if (card !== draggedElement && draggedElement) {
-                // Swap positions
                 const allCards = [...grid.children];
                 const draggedIndex = allCards.indexOf(draggedElement);
                 const targetIndex = allCards.indexOf(card);
@@ -643,17 +690,8 @@ function loadCardOrder() {
     });
 }
 
-// Add entrance animations (simplified)
-function addEntranceAnimations() {
-    // Simplified - no staggered animations for cleaner experience
-}
+// ========== Quick Actions ==========
 
-// Add ripple effect to buttons (disabled for simplicity)
-function addRippleEffect() {
-    // Disabled - no ripple effect for cleaner interaction
-}
-
-// Initialize quick actions
 function initializeQuickActions() {
     // Toggle favorites view
     const toggleBtn = document.getElementById('toggleFavoritesView');
@@ -666,27 +704,17 @@ function initializeQuickActions() {
         });
     }
 
-    // Clear all favorites
+    // Reset favorites to defaults
     const clearBtn = document.getElementById('clearAllFavorites');
     if (clearBtn) {
         clearBtn.addEventListener('click', () => {
             if (confirm('هل تريد إعادة تعيين المفضلات إلى الافتراضية؟')) {
-                // Reset to default favorites
-                const defaultFavorites = [
-                    'https://translate.google.com',
-                    'https://web.whatsapp.com',
-                    'https://www.facebook.com',
-                    'https://www.youtube.com',
-                    'https://gemini.google.com/',
-                    'https://claude.ai/new'
-                ];
-
-                localStorage.setItem('app-favorites', JSON.stringify(defaultFavorites));
+                localStorage.setItem('app-favorites', JSON.stringify([...DEFAULT_FAVORITES]));
 
                 // Reset all favorite buttons
                 document.querySelectorAll('.favorite-btn').forEach(btn => {
                     const card = btn.closest('.card');
-                    if (card && defaultFavorites.includes(card.dataset.url)) {
+                    if (card && DEFAULT_FAVORITES.includes(card.dataset.url)) {
                         btn.classList.add('active');
                         const icon = btn.querySelector('i');
                         if (icon) icon.className = 'fas fa-heart';
@@ -705,13 +733,24 @@ function initializeQuickActions() {
     }
 }
 
-// Main initialization
+// ========== Dynamic Copyright ==========
+
+function updateCopyrightYear() {
+    const copyrightSpan = document.querySelector('.footer-copyright span');
+    if (copyrightSpan) {
+        const currentYear = new Date().getFullYear();
+        copyrightSpan.textContent = `${currentYear} جميع الحقوق محفوظة`;
+    }
+}
+
+// ========== Main Initialization ==========
+
 function initialize() {
-    console.log('🚀 Initializing Modern Links Hub...');
+    console.log('🚀 Initializing Linkaty...');
 
     hideLoading();
     initializeTheme();
-    initializeIconFallback(); // Handle icon loading errors
+    initializeIconFallback();
     initializeSearch();
     initializeCardClicks();
     initializeFavorites();
@@ -720,12 +759,11 @@ function initialize() {
     initializeScrollTop();
     loadCardOrder();
     initializeDragAndDrop();
-    initializeFavoritesBarDragDrop();
-    initializeQuickActions(); // Fix: Added this call to make reset favorites work
-    addEntranceAnimations();
-    addRippleEffect();
+    // Note: initializeFavoritesBarDragDrop() is called inside updateFavoritesBar()
+    initializeQuickActions();
+    updateCopyrightYear();
 
-    console.log('✅ Modern Links Hub Initialized Successfully!');
+    console.log('✅ Linkaty Initialized Successfully!');
 }
 
 // Start when DOM is ready

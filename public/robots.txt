@@ -1,10 +1,10 @@
-# robots.txt for Modern Links Hub
+# robots.txt for Linkaty
 
 User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://your-domain.netlify.app/sitemap.xml
+Sitemap: https://linkaty-pro.netlify.app/sitemap.xml
 
 # Crawl-delay
 Crawl-delay: 1
