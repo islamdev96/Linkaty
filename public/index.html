@@ -69,45 +69,40 @@
   </button>
 
   <div class="container">
-    <header>
-      <div class="theme-toggle">
-        <button id="themeToggle" class="theme-btn" title="تبديل الوضع المظلم">
-          <i class="fas fa-moon"></i>
-        </button>
-      </div>
-
-      <div class="header-title">
+    <!-- Top Navigation Bar -->
+    <nav class="top-nav">
+      <div class="nav-brand">
         <h1>Linkaty</h1>
-        <p class="subtitle">بوابة شخصية للوصول السريع إلى أهم المواقع والأدوات الرقمية</p>
       </div>
-      <div class="search-container">
+      
+      <div class="nav-search">
         <div class="search-box">
           <i class="fas fa-search search-icon"></i>
-          <input type="search" id="searchInput" placeholder="ابحث عن موقع أو أداة..." autocomplete="off" />
+          <input type="search" id="searchInput" placeholder="بحث سريع عن أداة أو موقع..." autocomplete="off" />
           <button class="clear-search" id="clearSearch" title="مسح البحث">
             <i class="fas fa-times"></i>
           </button>
         </div>
       </div>
-    </header>
 
-    <!-- Quick Actions Bar -->
-    <div class="quick-actions-bar">
-      <button class="quick-action-btn" id="toggleFavoritesView">
-        <i class="fas fa-heart"></i>
-        <span>عرض المفضلة</span>
-      </button>
-      <button class="quick-action-btn" id="clearAllFavorites">
-        <i class="fas fa-redo"></i>
-        <span>إعادة تعيين المفضلة</span>
-      </button>
-    </div>
+      <div class="nav-actions">
+        <button id="toggleFavoritesView" class="nav-action-btn" title="تصفية المفضلة فقط">
+          <i class="fas fa-heart" style="color: #e74c3c;"></i>
+        </button>
+        <button id="clearAllFavorites" class="nav-action-btn" title="إعادة تعيين المفضلة للافتراضي">
+          <i class="fas fa-redo"></i>
+        </button>
+        <button id="themeToggle" class="nav-action-btn" title="تبديل الثيم">
+          <i class="fas fa-moon"></i>
+        </button>
+      </div>
+    </nav>
 
-    <!-- Favorites Bar -->
+    <!-- Favorites Bar (Always on top when not empty) -->
     <div class="favorites-bar" id="favoritesBar">
       <div class="favorites-bar-title">
-        <i class="fas fa-heart"></i>
-        المفضلة
+        <i class="fas fa-star" style="color: #ffc107;"></i>
+        الوصول السريع للمفضلة
       </div>
       <div class="favorites-bar-content" id="favoritesBarContent">
         <!-- Favorites will be added here dynamically -->
